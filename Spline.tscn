@@ -7,13 +7,29 @@
 script = ExtResource( 1 )
 
 [node name="Spline0" type="Node2D" parent="."]
-position = Vector2( 38, 143 )
+position = Vector2( 202.248, 312.641 )
 script = ExtResource( 3 )
 
 [node name="Spline1" type="Node2D" parent="."]
-position = Vector2( 122, 67 )
+position = Vector2( 46.0969, 81.4809 )
 script = ExtResource( 3 )
 
 [node name="Spline2" type="Node2D" parent="."]
-position = Vector2( 129, 138 )
+position = Vector2( 140.81, 61.0443 )
+script = ExtResource( 3 )
+
+[node name="Spline3" type="Node2D" parent="."]
+position = Vector2( 149.49, 262.207 )
+script = ExtResource( 3 )
+
+[node name="Spline4" type="Node2D" parent="."]
+position = Vector2( 37.1573, 274.969 )
+script = ExtResource( 3 )
+
+[node name="Spline5" type="Node2D" parent="."]
+position = Vector2( 119.671, 135.101 )
+script = ExtResource( 3 )
+
+[node name="Spline6" type="Node2D" parent="."]
+position = Vector2( 233.962, 202.323 )
 script = ExtResource( 3 )
