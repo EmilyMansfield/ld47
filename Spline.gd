@@ -148,6 +148,19 @@ func get_segment_end(idx: int) -> Node2D:
         assert(self.is_closed)
         return self.get_child(0) as Node2D
 
+
+# TODO: Customization point for fancy splines
+func get_overlapping_segment(pos: Vector2):
+    # Check if pos (global position) lies on any of the spline segments
+    for i in range(get_segment_count()):
+        var c0 := get_segment_begin(i)
+        var c1 := get_segment_end(i)
+        var p := Geometry.get_closest_point_to_segment_2d(pos, c0.get_global_position(), c1.get_global_position())
+        if p.distance_squared_to(pos) <= pow(self.line_width * 2.0, 2.0):
+            return [c0, c1]
+    return null
+
+    
 # TODO: Customization point for fancy splines
 func check_crossing(idx0: int, idx1: int):
     # Segment 0

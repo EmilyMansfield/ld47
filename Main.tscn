@@ -1,15 +1,15 @@
 [gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://DraggableManager.tscn" type="PackedScene" id=1]
+[ext_resource path="res://SplineDraggableManager.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Spline.tscn" type="PackedScene" id=2]
 [ext_resource path="res://Main.gd" type="Script" id=3]
 
 [node name="Main" type="Node"]
 script = ExtResource( 3 )
 
-[node name="DraggableManager" parent="." instance=ExtResource( 1 )]
+[node name="SplineDraggableManager" parent="." instance=ExtResource( 1 )]
 
-[node name="Spline" parent="DraggableManager" instance=ExtResource( 2 )]
+[node name="Spline" parent="SplineDraggableManager" instance=ExtResource( 2 )]
 position = Vector2( 351, 198 )
 line_width = 5.0
 is_closed = true

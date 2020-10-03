@@ -1,5 +1,7 @@
 extends Node
 
+class_name DraggableManager
+
 signal drag_start
 signal drag_stop
 # No static typing for signals because of dynamic connections :(
@@ -44,11 +46,9 @@ func find_nearest_draggable_by_dist(pos: Vector2): # -> Draggable?:
 
     return min_draggable
         
-
-func _ready() -> void:
-    self.refresh_draggables()
-
-func _input(event: InputEvent) -> void:
+# Enables overriding the call to _input, which would otherwise be called
+# automatically in derived classes
+func do_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == BUTTON_LEFT:
             if self.active_draggable:
@@ -64,6 +64,13 @@ func _input(event: InputEvent) -> void:
         if self.active_draggable != null:
             var draggable = active_draggable as Draggable
             draggable.set_global_position(event.position - self.drag_position)
+    
+
+func _ready() -> void:
+    self.refresh_draggables()
+
+func _input(event: InputEvent) -> void:
+    do_input(event)
         
 
 func _process(_delta) -> void:
