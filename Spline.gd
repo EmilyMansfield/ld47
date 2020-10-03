@@ -66,6 +66,101 @@ func get_spline_normal(begin: Vector2, end: Vector2, _t: float) -> Vector2:
     var tangent := end - begin
     var normal := Vector2(-tangent.y, tangent.x)
     return normal.normalized()
+
+
+func get_segment_count() -> int:
+    if self.is_closed:
+        return self.get_child_count()
+    else:
+        return self.get_child_count() - 1
+        
+
+func check_crossing(idx0: int, idx1: int):
+    # Segment 0
+    var c0 := self.get_child(idx0) as Node2D
+    var c1: Node2D
+    if idx0 < self.get_child_count() - 1:
+        c1 = self.get_child(idx0 + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        c1 = self.get_child(0) as Node2D
+    var p0 := c0.get_position()
+    var p1 := c1.get_position()
+    p1 = interp_spline(p0, p1, 0.99)
+
+    # Segment 1
+    var d0 := self.get_child(idx1) as Node2D
+    var d1: Node2D
+    if idx1 < self.get_child_count() - 1:
+        d1 = self.get_child(idx1 + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        d1 = self.get_child(0) as Node2D
+    var q0 := d0.get_position()
+    var q1 := d1.get_position()
+    q1 = interp_spline(q0, q1, 0.99)
+    
+    return Geometry.segment_intersects_segment_2d(p0, p1, q0, q1)
+
+
+func get_crossing_number() -> int:
+    var num_crossings := 0
+    for i in range(get_segment_count()):
+        for j in range(i + 1, get_segment_count()):
+            var crossing = check_crossing(i, j)
+            if crossing is Vector2:
+                num_crossings += 1
+    return num_crossings
+
+
+func _draw():
+#    var points = get_poly_spline_points()
+#    draw_polyline(points, self.line_color, self.line_width, true)
+    for i in range(self.get_child_count() - 1):
+        var c0 := self.get_child(i) as Node2D
+        var c1 := self.get_child(i + 1) as Node2D
+        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
+        draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
+    
+    if self.is_closed and self.get_child_count() > 1:
+        var c0 := self.get_children().back() as Node2D
+        var c1 := self.get_child(0) as Node2D
+        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
+        draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
+
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(_delta):
+    var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
+                 Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
+    self.line_color = cols[self.get_crossing_number() % 6]
+    self.update()
+
+
+# UNUSED!
+func check_crossing_circle(idx: int, t: float, radius: float) -> int:
+    assert (0 <= t and t <= 1)
+    var c0 := self.get_child(idx) as Node2D
+    var c1: Node2D
+    if idx < self.get_child_count() - 1:
+        c1 = self.get_child(idx + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        c1 = self.get_child(0) as Node2D
+    
+    var p0 := c0.get_position()
+    var p1 := c1.get_position()
+    var pos := interp_spline(p0, p1, t)
+    
+    for i in range(get_segment_count()):
+        if i == idx:
+            continue
+            
+        var s := spline_intersects_circle(i, pos, radius)
+        if s >= 0.0 and s <= 1.0:
+            return i
+
+    return -1
     
 
 # Use dumbbell construction at t along line idx with separation sep and dumbbell
@@ -136,97 +231,3 @@ func spline_intersects_circle(idx: int, pos: Vector2, r: float) -> float:
     return Geometry.segment_intersects_circle(c0.get_position(),
                                               c1.get_position(),
                                               pos, r)
-
-
-func get_segment_count() -> int:
-    if self.is_closed:
-        return self.get_child_count()
-    else:
-        return self.get_child_count() - 1
-        
-
-func check_crossing(idx0: int, idx1: int):
-    # Segment 0
-    var c0 := self.get_child(idx0) as Node2D
-    var c1: Node2D
-    if idx0 < self.get_child_count() - 1:
-        c1 = self.get_child(idx0 + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        c1 = self.get_child(0) as Node2D
-    var p0 := c0.get_position()
-    var p1 := c1.get_position()
-    p1 = interp_spline(p0, p1, 0.99)
-
-    # Segment 1
-    var d0 := self.get_child(idx1) as Node2D
-    var d1: Node2D
-    if idx1 < self.get_child_count() - 1:
-        d1 = self.get_child(idx1 + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        d1 = self.get_child(0) as Node2D
-    var q0 := d0.get_position()
-    var q1 := d1.get_position()
-    q1 = interp_spline(q0, q1, 0.99)
-    
-    return Geometry.segment_intersects_segment_2d(p0, p1, q0, q1)
-
-# UNUSED!
-func check_crossing_circle(idx: int, t: float, radius: float) -> int:
-    assert (0 <= t and t <= 1)
-    var c0 := self.get_child(idx) as Node2D
-    var c1: Node2D
-    if idx < self.get_child_count() - 1:
-        c1 = self.get_child(idx + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        c1 = self.get_child(0) as Node2D
-    
-    var p0 := c0.get_position()
-    var p1 := c1.get_position()
-    var pos := interp_spline(p0, p1, t)
-    
-    for i in range(get_segment_count()):
-        if i == idx:
-            continue
-            
-        var s := spline_intersects_circle(i, pos, radius)
-        if s >= 0.0 and s <= 1.0:
-            return i
-
-    return -1
-
-
-func get_crossing_number() -> int:
-    var num_crossings := 0
-    for i in range(get_segment_count()):
-        for j in range(i + 1, get_segment_count()):
-            var crossing = check_crossing(i, j)
-            if crossing is Vector2:
-                num_crossings += 1
-    return num_crossings
-
-
-func _draw():
-#    var points = get_poly_spline_points()
-#    draw_polyline(points, self.line_color, self.line_width, true)
-    for i in range(self.get_child_count() - 1):
-        var c0 := self.get_child(i) as Node2D
-        var c1 := self.get_child(i + 1) as Node2D
-        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
-        draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
-    
-    if self.is_closed and self.get_child_count() > 1:
-        var c0 := self.get_children().back() as Node2D
-        var c1 := self.get_child(0) as Node2D
-        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
-        draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(_delta):
-    var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
-                 Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
-    self.line_color = cols[self.get_crossing_number() % 6]
-    self.update()
