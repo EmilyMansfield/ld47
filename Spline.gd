@@ -4,6 +4,8 @@ export var line_width: float = 8.0
 export var is_closed: bool = false
 export var line_color: Color = Color(0.2, 0.7, 0.9)
 
+var crossings := []
+
 # TODO: Get fancy and use Kochanek-Bartels, probably
 func get_spline_points(begin: Vector2, end: Vector2) -> PoolVector2Array:
     var num_points := 16
@@ -75,6 +77,7 @@ func get_segment_count() -> int:
         return self.get_child_count() - 1
         
 
+# TODO: Customization point for fancy splines
 func check_crossing(idx0: int, idx1: int):
     # Segment 0
     var c0 := self.get_child(idx0) as Node2D
@@ -102,15 +105,59 @@ func check_crossing(idx0: int, idx1: int):
     
     return Geometry.segment_intersects_segment_2d(p0, p1, q0, q1)
 
+# TODO: Customization point for fancy splines
+# pre: pos lies on segment idx
+func get_parameter_from_point(idx: int, pos: Vector2) -> float:
+    var c0 := self.get_child(idx) as Node2D
+    var c1: Node2D
+    if idx < self.get_child_count() - 1:
+        c1 = self.get_child(idx + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        c1 = self.get_child(0) as Node2D
+    var p0 := c0.get_position()
+    var p1 := c1.get_position()
+    
+    var delta := p1 - p0
+    if abs(delta.x) >= abs(delta.y):
+        var t := (pos.x - p0.x) / delta.x
+        return t
+    else:
+        var t := (pos.y - p0.y) / delta.y
+        return t
+        
+# TODO: Customization point for fancy splines
+func get_point_from_parameter(idx: int, t: float) -> Vector2:
+    var c0 := self.get_child(idx) as Node2D
+    var c1: Node2D
+    if idx < self.get_child_count() - 1:
+        c1 = self.get_child(idx + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        c1 = self.get_child(0) as Node2D
+    var p0 := c0.get_position()
+    var p1 := c1.get_position()
 
-func get_crossing_number() -> int:
-    var num_crossings := 0
+    return interp_spline(p0, p1, t)
+
+
+# For each segment, an array of intersection parameters.
+func get_crossings() -> Array:
+    var crossings: Array
+    for i in range(get_segment_count()):
+        crossings.push_back([])
+
     for i in range(get_segment_count()):
         for j in range(i + 1, get_segment_count()):
             var crossing = check_crossing(i, j)
-            if crossing is Vector2:
-                num_crossings += 1
-    return num_crossings
+            if not (crossing is Vector2):
+                continue
+            var t_i := get_parameter_from_point(i, crossing as Vector2)
+            var t_j := get_parameter_from_point(j, crossing as Vector2)
+            crossings[i].push_back(t_i)
+            crossings[j].push_back(t_j)
+
+    return crossings
 
 
 func _draw():
@@ -127,14 +174,47 @@ func _draw():
         var c1 := self.get_child(0) as Node2D
         draw_spline(c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
-
-
+        
+    for i in range(self.get_segment_count()):
+        if i >= self.crossings.size():
+            break
+        var crossings := self.crossings[i] as Array
+        for t in crossings:
+            var p := get_point_from_parameter(i, t)
+            draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
+        
+        
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
     var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
                  Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
-    self.line_color = cols[self.get_crossing_number() % 6]
+    self.crossings = get_crossings()
+    var crossing_number := 0
+    for cross in crossings:
+        crossing_number += cross.size()
+    crossing_number /= 2
+    
+    # self.line_color = cols[self.get_crossing_number() % 6]
     self.update()
+
+
+###############################################################################
+# UNUSED!
+###############################################################################
+
+func get_crossing_number() -> int:
+    var num_crossings := 0
+    for i in range(get_segment_count()):
+        for j in range(i + 1, get_segment_count()):
+            var crossing = check_crossing(i, j)
+            if not (crossing is Vector2):
+                continue
+            # Valid crossing
+            num_crossings += 1
+            # Find t value on each line that corresponds to crossing point
+            var t_i := get_parameter_from_point(i, crossing as Vector2)
+            var t_j := get_parameter_from_point(j, crossing as Vector2)
+    return num_crossings
 
 
 # UNUSED!
