@@ -70,7 +70,7 @@ func get_spline_points_avoid_intersection(idx: int, begin: Vector2, end: Vector2
                 # target gap size world space, t0 is the center of the gap, and
                 # eps is the target gap size in parameter space. For non-constant
                 # speed parameterizations this probably won't look too great...
-                var delta := 3.0 * self.line_width
+                var delta := 4.0 * self.line_width
                 var eps := delta / (2.0 * (end - begin).length())
                 var p0 := interp_spline(begin, end, crossing_t - eps)
                 var p1 := interp_spline(begin, end, crossing_t + eps)
