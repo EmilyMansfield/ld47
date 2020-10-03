@@ -25,6 +25,8 @@ class CrossingMap:
 
 
 var crossing_map: CrossingMap
+var invalid_move_normals := [] # Array[Vector2]
+var invalid_move_offsets := [] # [Vector2]
 
 # TODO: Get fancy and use Kochanek-Bartels, probably
 func get_spline_points(begin: Vector2, end: Vector2) -> PoolVector2Array:
@@ -305,6 +307,17 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
     var crossing_map0 := self.crossing_map
 
     draggable.set_global_position(pos)
+    if not self.invalid_move_normals.empty() and not self.invalid_move_offsets.empty():
+        assert(self.invalid_move_normals.size() == self.invalid_move_offsets.size())
+        for i in range(self.invalid_move_normals.size()):
+            var normal: Vector2 = self.invalid_move_normals[i]
+            var offset: Vector2 = self.invalid_move_offsets[i]
+            var q := pos - offset
+            if q.dot(normal) <= 0:
+                # Invalid move
+                draggable.set_global_position(pos0)
+                return
+
     self.crossing_map = get_crossings()
 
     var crossing_points := []
@@ -318,10 +331,26 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
             var q: Vector2 = crossing_points[j]
             var dist2 := p.distance_squared_to(q)
             if dist2 <= pow(2.0 * self.line_width, 2.0):
-                # Points too close, invalid move
+                # Points too close, invalid move. Define a union of half-planes
+                # symmetric about the current direction of motion that cannot
+                # be moved through. Like #/^\# if that makes any sense.
                 draggable.set_global_position(pos0)
                 self.crossing_map = crossing_map0
+                var normal := (pos0 - pos).normalized()
+                var offset := pos
+                # No idea which way this rotates, but it's symmetric so oh well
+                self.invalid_move_normals = [
+                    normal.rotated(-0.1),
+                    normal.rotated(+0.1),
+                   ]
+                self.invalid_move_offsets = [
+                    offset, offset
+                   ]
                 return
+
+    # Valid move, can clear exclusion half-space
+    self.invalid_move_normals.clear()
+    self.invalid_move_offsets.clear()
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
