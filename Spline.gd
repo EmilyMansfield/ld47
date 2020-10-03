@@ -296,22 +296,23 @@ func _draw():
         draw_spline_avoid_intersection(self.get_segment_count() - 1, c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
 
-    var crossing_points := []
-    for c in self.crossing_map.crossings:
-        crossing_points.push_back(c.pos)
-
     if self.show_intersections:
-        for p in crossing_points:
-            draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
+        var crossing_points := []
+        for c in self.crossing_map.crossings:
+            crossing_points.push_back(c.pos)
     
-    var num_crossing_points := crossing_points.size()
-    for i in range(num_crossing_points):
-        var p: Vector2 = crossing_points[i]
-        for j in range(i + 1, num_crossing_points):
-            var q: Vector2 = crossing_points[j]
-            var dist2 := p.distance_squared_to(q)
-            if dist2 <= pow(2.0 * self.line_width, 2.0):
-                draw_circle((p + q) / 2.0, 2.0 * self.line_width, Color(1.0, 0.2, 0.3))
+        if self.show_intersections:
+            for p in crossing_points:
+                draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
+        
+        var num_crossing_points := crossing_points.size()
+        for i in range(num_crossing_points):
+            var p: Vector2 = crossing_points[i]
+            for j in range(i + 1, num_crossing_points):
+                var q: Vector2 = crossing_points[j]
+                var dist2 := p.distance_squared_to(q)
+                if dist2 <= pow(2.0 * self.line_width, 2.0):
+                    draw_circle((p + q) / 2.0, 2.0 * self.line_width, Color(1.0, 0.2, 0.3))
 
 
 func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
@@ -332,17 +333,17 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
 
     self.crossing_map = get_crossings()
 
-    var crossing_points := []
-    for c in self.crossing_map.crossings:
-        crossing_points.push_back(c.pos)
-
-    var num_crossing_points := crossing_points.size()
+    var num_crossing_points := self.crossing_map.crossings.size()
     for i in range(num_crossing_points):
-        var p: Vector2 = crossing_points[i]
+        var p: Vector2 = self.crossing_map.crossings[i].pos
+        var p_on_top: bool = (i != self.crossing_map.crossings[i].lower_idx)
+
         for j in range(i + 1, num_crossing_points):
-            var q: Vector2 = crossing_points[j]
-            var dist2 := p.distance_squared_to(q)
-            if dist2 <= pow(2.0 * self.line_width, 2.0):
+            var q: Vector2 = self.crossing_map.crossings[j].pos
+            var q_on_top: bool = (j != self.crossing_map.crossings[j].lower_idx)
+            
+            var same_side := p_on_top == q_on_top
+            if not same_side and p.distance_squared_to(q) <= pow(2.0 * self.line_width, 2.0):
                 # Points too close, invalid move. Define a union of half-planes
                 # symmetric about the current direction of motion that cannot
                 # be moved through. Like #/^\# if that makes any sense.
