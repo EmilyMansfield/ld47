@@ -4,7 +4,27 @@ export var line_width: float = 8.0
 export var is_closed: bool = false
 export var line_color: Color = Color(0.2, 0.7, 0.9)
 
-var crossings := []
+
+class Crossing:
+    var pos: Vector2
+        
+    var t0: float
+    var t1: float
+    
+    var idx0: int
+    var idx1: int
+    var lower_idx: int
+
+
+class CrossingMap:
+    # Array of all actual crossings, deduplicated
+    var crossings: Array = []
+    # Array of arrays where element i of the outer array is an array of all
+    # crossings involving spline segment i.
+    var per_line_crossings: Array = []
+
+
+var crossing_map: CrossingMap
 
 # TODO: Get fancy and use Kochanek-Bartels, probably
 func get_spline_points(begin: Vector2, end: Vector2) -> PoolVector2Array:
@@ -141,24 +161,41 @@ func get_point_from_parameter(idx: int, t: float) -> Vector2:
     return interp_spline(p0, p1, t)
 
 
-# For each segment, an array of intersection parameters.
-func get_crossings() -> Array:
-    var crossings: Array
-    for i in range(get_segment_count()):
-        crossings.push_back([])
+func get_crossings() -> CrossingMap:
+    var crossing_map := CrossingMap.new()
+
+    for _i in range(get_segment_count()):
+        crossing_map.per_line_crossings.push_back([])
 
     for i in range(get_segment_count()):
         for j in range(i + 1, get_segment_count()):
-            var crossing = check_crossing(i, j)
-            if not (crossing is Vector2):
+            var p = check_crossing(i, j)
+            if not (p is Vector2):
                 continue
-            var t_i := get_parameter_from_point(i, crossing as Vector2)
-            var t_j := get_parameter_from_point(j, crossing as Vector2)
-            crossings[i].push_back(t_i)
-            crossings[j].push_back(t_j)
+            var t_i := get_parameter_from_point(i, p as Vector2)
+            var t_j := get_parameter_from_point(j, p as Vector2)
+            
+            var crossing_idx := crossing_map.crossings.size()
+            var crossing := Crossing.new()
+            crossing.idx0 = i
+            crossing.idx1 = j
+            crossing.t0 = t_i
+            crossing.t1 = t_j
+            crossing.pos = p as Vector2
+            # TODO: Lower indx!
+            crossing.lower_idx = 0
+            crossing_map.crossings.push_back(crossing)
+            
+            crossing_map.per_line_crossings[i].push_back(crossing_idx)
+            crossing_map.per_line_crossings[j].push_back(crossing_idx)
 
-    return crossings
+    return crossing_map
 
+func get_crossing_number() -> int:
+    return self.crossing_map.crossings.size()
+
+func _ready() -> void:
+    self.crossing_map = CrossingMap.new()
 
 func _draw():
 #    var points = get_poly_spline_points()
@@ -175,22 +212,9 @@ func _draw():
         draw_spline(c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
 
-    # Ugly uniquing of crossing points
     var crossing_points := []
-    for i in range(self.get_segment_count()):
-        if i >= self.crossings.size():
-            break
-        var crossings := self.crossings[i] as Array
-        for t in crossings:
-            var p := get_point_from_parameter(i, t)
-            var present := false
-            for q in crossing_points:
-                var d: Vector2 = (p - q).abs()
-                if d.x < 1.0e-3 and d.y < 1.0e-3:
-                    present = true
-                    break
-            if not present:
-                crossing_points.push_back(p)
+    for c in self.crossing_map.crossings:
+        crossing_points.push_back(c.pos)
 
     for p in crossing_points:
         draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
@@ -210,34 +234,15 @@ func _draw():
 func _process(_delta):
     var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
                  Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
-    self.crossings = get_crossings()
-    var crossing_number := 0
-    for cross in crossings:
-        crossing_number += cross.size()
-    crossing_number /= 2
+    self.crossing_map = get_crossings()
     
-    # self.line_color = cols[self.get_crossing_number() % 6]
+    #self.line_color = cols[self.get_crossing_number() % 6]
     self.update()
 
 
 ###############################################################################
 # UNUSED!
 ###############################################################################
-
-func get_crossing_number() -> int:
-    var num_crossings := 0
-    for i in range(get_segment_count()):
-        for j in range(i + 1, get_segment_count()):
-            var crossing = check_crossing(i, j)
-            if not (crossing is Vector2):
-                continue
-            # Valid crossing
-            num_crossings += 1
-            # Find t value on each line that corresponds to crossing point
-            var t_i := get_parameter_from_point(i, crossing as Vector2)
-            var t_j := get_parameter_from_point(j, crossing as Vector2)
-    return num_crossings
-
 
 # UNUSED!
 func check_crossing_circle(idx: int, t: float, radius: float) -> int:
