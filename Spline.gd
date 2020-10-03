@@ -37,7 +37,62 @@ func get_spline_points(begin: Vector2, end: Vector2) -> PoolVector2Array:
         points.push_back(p)
     assert(points.size() == num_points)
     return points
+
+
+func get_spline_points_avoid_intersection(idx: int, begin: Vector2, end: Vector2) -> Array:
+    # Guideline, won't be correct if there are intersections
+    var num_points := 16
+    var points_collection := []
+    var points := PoolVector2Array()
+
+    if self.crossing_map.per_line_crossings.empty():
+        return [get_spline_points(begin, end)]
+
+    var crossings := self.crossing_map.per_line_crossings[idx] as Array
+    if crossings.empty():
+        return [get_spline_points(begin, end)]
     
+    var crossing_idx := 0
+    var crossing := self.crossing_map.crossings[crossings[crossing_idx]] as Crossing
+    var delta_t = 1.0 / (num_points - 1)
+    var t := 0.0
+    while t <= 1.0:
+        var crossing_t := crossing.t0 if idx == crossing.idx0 else crossing.t1
+        if t > crossing_t or (t + delta_t < crossing_t):
+            var p: Vector2 = interp_spline(begin, end, t)
+            points.push_back(p)
+        else:
+            # crossing_t lies between two steps
+            # If we're on top then can just continue
+            if crossing.lower_idx == idx:
+                # Since want to remove an absolute length but have a t value, need
+                # to solve ||f(t0 + eps) - f(t0 - eps)|| = delta where delta is the
+                # target gap size world space, t0 is the center of the gap, and
+                # eps is the target gap size in parameter space. For non-constant
+                # speed parameterizations this probably won't look too great...
+                var delta := 3.0 * self.line_width
+                var eps := delta / (2.0 * (end - begin).length())
+                var p0 := interp_spline(begin, end, crossing_t - eps)
+                var p1 := interp_spline(begin, end, crossing_t + eps)
+                points.push_back(p0)
+                points_collection.push_back(points)
+                points = PoolVector2Array()
+                points.push_back(p1)
+                while (t + delta_t < crossing_t + eps):
+                    t += delta_t
+            else:
+                var p: Vector2 = interp_spline(begin, end, t)
+                points.push_back(p)
+
+            if crossing_idx + 1 < crossings.size():
+                crossing_idx += 1
+                crossing = self.crossing_map.crossings[crossings[crossing_idx]] as Crossing
+
+        t += delta_t
+    
+    points_collection.push_back(points)
+    return points_collection
+
 
 func draw_spline(begin: Vector2, end: Vector2, color: Color) -> void:
     var points = get_spline_points(begin, end)
@@ -49,29 +104,12 @@ func draw_spline(begin: Vector2, end: Vector2, color: Color) -> void:
         draw_line(points[i], points[i + 1], color, self.line_width, true)
 
 
-func get_poly_spline_points() -> PoolVector2Array:
-    var points := PoolVector2Array()
-
-    var last_drop_index = self.get_child_count() - 2
-    if self.is_closed:
-        last_drop_index += 1
-
-    for i in range(self.get_child_count() - 1):
-        var c0 := self.get_child(i) as Node2D
-        var c1 := self.get_child(i + 1) as Node2D
-        var new_points = get_spline_points(c0.get_position(), c1.get_position())
-        if i <= last_drop_index:
-            new_points.remove(new_points.size() - 1)
-        points.append_array(new_points)
+func draw_spline_avoid_intersection(idx: int, begin: Vector2, end: Vector2, color: Color) -> void:
+    var points_collection = get_spline_points_avoid_intersection(idx, begin, end)
     
-    if self.is_closed and self.get_child_count() > 1:
-        var c0 := self.get_children().back() as Node2D
-        var c1 := self.get_child(0) as Node2D
-        var new_points = get_spline_points(c0.get_position(), c1.get_position())
-#        new_points.remove(new_points.size() - 1)
-        points.append_array(new_points)
-
-    return points
+    for segment in points_collection:
+        for i in range(segment.size() - 1):
+            draw_line(segment[i], segment[i + 1], color, self.line_width, true)
 
 
 func interp_spline(begin: Vector2, end: Vector2, t: float) -> Vector2:
@@ -97,28 +135,31 @@ func get_segment_count() -> int:
         return self.get_child_count() - 1
         
 
+func get_segment_begin(idx: int) -> Node2D:
+    assert(0 <= idx and idx <= get_segment_count())
+    return self.get_child(idx) as Node2D
+    
+    
+func get_segment_end(idx: int) -> Node2D:
+    assert(0 <= idx && idx <= get_segment_count())
+    if idx < self.get_child_count() - 1:
+        return self.get_child(idx + 1) as Node2D
+    else:
+        assert(self.is_closed)
+        return self.get_child(0) as Node2D
+
 # TODO: Customization point for fancy splines
 func check_crossing(idx0: int, idx1: int):
     # Segment 0
-    var c0 := self.get_child(idx0) as Node2D
-    var c1: Node2D
-    if idx0 < self.get_child_count() - 1:
-        c1 = self.get_child(idx0 + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        c1 = self.get_child(0) as Node2D
+    var c0 := get_segment_begin(idx0)
+    var c1 := get_segment_end(idx0)
     var p0 := c0.get_position()
     var p1 := c1.get_position()
     p1 = interp_spline(p0, p1, 0.99)
 
     # Segment 1
-    var d0 := self.get_child(idx1) as Node2D
-    var d1: Node2D
-    if idx1 < self.get_child_count() - 1:
-        d1 = self.get_child(idx1 + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        d1 = self.get_child(0) as Node2D
+    var d0 := get_segment_begin(idx1)
+    var d1 := get_segment_end(idx1)
     var q0 := d0.get_position()
     var q1 := d1.get_position()
     q1 = interp_spline(q0, q1, 0.99)
@@ -128,13 +169,8 @@ func check_crossing(idx0: int, idx1: int):
 # TODO: Customization point for fancy splines
 # pre: pos lies on segment idx
 func get_parameter_from_point(idx: int, pos: Vector2) -> float:
-    var c0 := self.get_child(idx) as Node2D
-    var c1: Node2D
-    if idx < self.get_child_count() - 1:
-        c1 = self.get_child(idx + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        c1 = self.get_child(0) as Node2D
+    var c0 := get_segment_begin(idx)
+    var c1 := get_segment_end(idx)
     var p0 := c0.get_position()
     var p1 := c1.get_position()
     
@@ -148,13 +184,8 @@ func get_parameter_from_point(idx: int, pos: Vector2) -> float:
         
 # TODO: Customization point for fancy splines
 func get_point_from_parameter(idx: int, t: float) -> Vector2:
-    var c0 := self.get_child(idx) as Node2D
-    var c1: Node2D
-    if idx < self.get_child_count() - 1:
-        c1 = self.get_child(idx + 1) as Node2D
-    else:
-        assert(self.is_closed)
-        c1 = self.get_child(0) as Node2D
+    var c0 := self.get_segment_begin(idx)
+    var c1 := self.get_segment_end(idx)
     var p0 := c0.get_position()
     var p1 := c1.get_position()
 
@@ -183,33 +214,60 @@ func get_crossings() -> CrossingMap:
             crossing.t1 = t_j
             crossing.pos = p as Vector2
             # TODO: Lower indx!
-            crossing.lower_idx = 0
+            crossing.lower_idx = i
             crossing_map.crossings.push_back(crossing)
             
             crossing_map.per_line_crossings[i].push_back(crossing_idx)
             crossing_map.per_line_crossings[j].push_back(crossing_idx)
 
+    # Sort the per_line_crossings for each line into increasing t order so that
+    # traversal along the line coincides with traversal along the crossings of
+    # that line. This helps rendering gaps around crossings.
+    for i in range(get_segment_count()):
+        var sorter = CrossingSorter.new(i, crossing_map)
+        crossing_map.per_line_crossings[i].sort_custom(sorter, "sort")
+    
     return crossing_map
+
+
+class CrossingSorter:
+    var idx: int
+    var crossing_map: CrossingMap
+
+    func _init(p_idx: int, p_crossing_map: CrossingMap):
+        self.idx = p_idx
+        self.crossing_map = p_crossing_map
+
+    func sort(a: int, b: int) -> bool:
+        var ca: Crossing = self.crossing_map.crossings[a]
+        var cb: Crossing = self.crossing_map.crossings[b]
+        var ta := ca.t0 if ca.idx0 == self.idx else ca.t1
+        var tb := cb.t0 if cb.idx0 == self.idx else cb.t1
+        return ta < tb
+        
 
 func get_crossing_number() -> int:
     return self.crossing_map.crossings.size()
 
+    
+
 func _ready() -> void:
-    self.crossing_map = CrossingMap.new()
+    self.crossing_map = get_crossings()
+    for c in self.crossing_map.crossings:
+        print((c as Crossing).idx0, " crosses ", (c as Crossing).idx1, " with ", (c as Crossing).lower_idx, " below")
+
 
 func _draw():
-#    var points = get_poly_spline_points()
-#    draw_polyline(points, self.line_color, self.line_width, true)
     for i in range(self.get_child_count() - 1):
         var c0 := self.get_child(i) as Node2D
         var c1 := self.get_child(i + 1) as Node2D
-        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
+        draw_spline_avoid_intersection(i, c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
     
     if self.is_closed and self.get_child_count() > 1:
         var c0 := self.get_children().back() as Node2D
         var c1 := self.get_child(0) as Node2D
-        draw_spline(c0.get_position(), c1.get_position(), self.line_color)
+        draw_spline_avoid_intersection(self.get_segment_count() - 1, c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
 
     var crossing_points := []
@@ -236,13 +294,37 @@ func _process(_delta):
                  Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
     self.crossing_map = get_crossings()
     
-    #self.line_color = cols[self.get_crossing_number() % 6]
+    self.line_color = cols[self.get_crossing_number() % 6]
     self.update()
 
 
 ###############################################################################
 # UNUSED!
 ###############################################################################
+
+func get_poly_spline_points() -> PoolVector2Array:
+    var points := PoolVector2Array()
+
+    var last_drop_index = self.get_child_count() - 2
+    if self.is_closed:
+        last_drop_index += 1
+
+    for i in range(self.get_child_count() - 1):
+        var c0 := self.get_child(i) as Node2D
+        var c1 := self.get_child(i + 1) as Node2D
+        var new_points = get_spline_points(c0.get_position(), c1.get_position())
+        if i <= last_drop_index:
+            new_points.remove(new_points.size() - 1)
+        points.append_array(new_points)
+    
+    if self.is_closed and self.get_child_count() > 1:
+        var c0 := self.get_children().back() as Node2D
+        var c1 := self.get_child(0) as Node2D
+        var new_points = get_spline_points(c0.get_position(), c1.get_position())
+#        new_points.remove(new_points.size() - 1)
+        points.append_array(new_points)
+
+    return points
 
 # UNUSED!
 func check_crossing_circle(idx: int, t: float, radius: float) -> int:
