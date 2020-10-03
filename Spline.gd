@@ -4,6 +4,14 @@ export var line_width: float = 8.0
 export var is_closed: bool = false
 export var line_color: Color = Color(0.2, 0.7, 0.9)
 
+var palette: Array = [
+    Color("51e5ff"), Color("440381"), Color("ec368d"), Color("ffa5a5"),
+   ]
+
+#var palette: Array = [
+#    Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
+#    Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)
+#]
 
 class Crossing:
     var pos: Vector2
@@ -355,11 +363,9 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
-    var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
-                 Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
 #    self.crossing_map = get_crossings()
     
-    self.line_color = cols[self.get_crossing_number() % cols.size()]
+    self.line_color = self.palette[self.get_crossing_number() % self.palette.size()]
     self.update()
 
 
