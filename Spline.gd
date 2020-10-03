@@ -174,16 +174,38 @@ func _draw():
         var c1 := self.get_child(0) as Node2D
         draw_spline(c0.get_position(), c1.get_position(), self.line_color)
         draw_circle(c1.get_position(), self.line_width / 2.0, self.line_color)
-        
+
+    # Ugly uniquing of crossing points
+    var crossing_points := []
     for i in range(self.get_segment_count()):
         if i >= self.crossings.size():
             break
         var crossings := self.crossings[i] as Array
         for t in crossings:
             var p := get_point_from_parameter(i, t)
-            draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
-        
-        
+            var present := false
+            for q in crossing_points:
+                var d: Vector2 = (p - q).abs()
+                if d.x < 1.0e-3 and d.y < 1.0e-3:
+                    present = true
+                    break
+            if not present:
+                crossing_points.push_back(p)
+
+    for p in crossing_points:
+        draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
+    
+    var num_crossing_points := crossing_points.size()
+    for i in range(num_crossing_points):
+        var p: Vector2 = crossing_points[i]
+        for j in range(i + 1, num_crossing_points):
+            var q: Vector2 = crossing_points[j]
+            var dist2 := p.distance_squared_to(q)
+            if dist2 <= pow(2.0 * self.line_width, 2.0):
+                draw_circle((p + q) / 2.0, 2.0 * self.line_width, Color(1.0, 0.2, 0.3))
+
+
+    
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
     var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
