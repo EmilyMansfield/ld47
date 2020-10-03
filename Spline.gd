@@ -300,14 +300,37 @@ func _draw():
                 draw_circle((p + q) / 2.0, 2.0 * self.line_width, Color(1.0, 0.2, 0.3))
 
 
-    
+func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
+    var pos0 := draggable.get_global_position()
+    var crossing_map0 := self.crossing_map
+
+    draggable.set_global_position(pos)
+    self.crossing_map = get_crossings()
+
+    var crossing_points := []
+    for c in self.crossing_map.crossings:
+        crossing_points.push_back(c.pos)
+
+    var num_crossing_points := crossing_points.size()
+    for i in range(num_crossing_points):
+        var p: Vector2 = crossing_points[i]
+        for j in range(i + 1, num_crossing_points):
+            var q: Vector2 = crossing_points[j]
+            var dist2 := p.distance_squared_to(q)
+            if dist2 <= pow(2.0 * self.line_width, 2.0):
+                # Points too close, invalid move
+                draggable.set_global_position(pos0)
+                self.crossing_map = crossing_map0
+                return
+
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
     var cols := [Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
                  Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)]
-    self.crossing_map = get_crossings()
+#    self.crossing_map = get_crossings()
     
-    self.line_color = cols[self.get_crossing_number() % 6]
+    self.line_color = cols[self.get_crossing_number() % cols.size()]
     self.update()
 
 

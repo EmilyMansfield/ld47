@@ -6,3 +6,5 @@ func _ready():
     for spline_node in spline_nodes:
         assert (spline_node is Draggable)
         $SplineDraggableManager.add_draggable(spline_node)
+
+    $SplineDraggableManager.connect("drag_position", $SplineDraggableManager/Spline, "_on_drag_position")

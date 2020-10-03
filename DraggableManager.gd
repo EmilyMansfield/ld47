@@ -6,7 +6,7 @@ signal drag_start
 signal drag_stop
 # No static typing for signals because of dynamic connections :(
 # https://github.com/godotengine/godot/issues/26045
-signal drag_position(pos)
+signal drag_position(draggable, pos)
 
 var active_draggable #: Draggable?
 var drag_position: Vector2

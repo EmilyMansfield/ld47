@@ -48,12 +48,15 @@ func do_input(event: InputEvent) -> void:
     if event is InputEventMouseMotion:
         if self.active_draggable != null:
             var draggable = active_draggable as Draggable
-            draggable.set_global_position(event.position - self.drag_position)
+            emit_signal("drag_position", draggable, event.position - self.drag_position)
+            # draggable.set_global_position(event.position - self.drag_position)
             return
         if self.active_draggable_segment != null:
-            var c0 := self.active_draggable_segment[0] as Node2D
-            var c1 := self.active_draggable_segment[1] as Node2D
-            c0.set_global_position(event.position - self.segment_drag_position0)
-            c1.set_global_position(event.position - self.segment_drag_position1)
+            var c0 := self.active_draggable_segment[0] as Draggable
+            var c1 := self.active_draggable_segment[1] as Draggable
+            emit_signal("drag_position", c0, event.position - self.segment_drag_position0)
+            emit_signal("drag_position", c1, event.position - self.segment_drag_position1)
+            #c0.set_global_position(event.position - self.segment_drag_position0)
+            #c1.set_global_position(event.position - self.segment_drag_position1)
             return
         
