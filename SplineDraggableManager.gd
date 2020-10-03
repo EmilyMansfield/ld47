@@ -42,7 +42,6 @@ func do_input(event: InputEvent) -> void:
                 if self.active_draggable_segment != null:
                     self.segment_drag_position0 = event.position - self.active_draggable_segment[0].get_global_position()
                     self.segment_drag_position1 = event.position - self.active_draggable_segment[1].get_global_position() 
-                    print(self.segment_drag_position0, self.segment_drag_position1)
                     return
         return
     
