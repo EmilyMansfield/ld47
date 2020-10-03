@@ -11,3 +11,4 @@ script = ExtResource( 3 )
 
 [node name="Spline" parent="DraggableManager" instance=ExtResource( 2 )]
 position = Vector2( 466, 247 )
+is_closed = true
