@@ -20,6 +20,7 @@ func add_draggable(drag: Draggable) -> void:
     
 func refresh_draggables() -> void:
     self.active_draggable = null
+    self.draggables.clear()
     for child in self.get_children():
         if child is Draggable:
             self.draggables.push_back(child)
