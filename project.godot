@@ -9,18 +9,25 @@
 config_version=4
 
 _global_script_classes=[ {
+"base": "Node2D",
+"class": "Draggable",
+"language": "GDScript",
+"path": "res://Draggable.gd"
+}, {
 "base": "",
 "class": "GitAPI",
 "language": "NativeScript",
 "path": "res://git_api.gdns"
 } ]
 _global_script_class_icons={
+"Draggable": "",
 "GitAPI": ""
 }
 
 [application]
 
 config/name="ld47"
+run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
 
 [gdnative]

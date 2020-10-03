@@ -1,10 +1,18 @@
-[gd_scene load_steps=2 format=2]
+[gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://Spline.gd" type="Script" id=1]
+[ext_resource path="res://SplineBegin.gd" type="Script" id=2]
+[ext_resource path="res://Draggable.gd" type="Script" id=3]
 
 [node name="Spline" type="Node2D"]
 script = ExtResource( 1 )
 
 [node name="SplineBegin" type="Node2D" parent="."]
+position = Vector2( 38, 143 )
+script = ExtResource( 2 )
+draggable_dims = Vector2( 16, 16 )
 
 [node name="SplineEnd" type="Node2D" parent="."]
+position = Vector2( 122, 67 )
+script = ExtResource( 3 )
+draggable_dims = Vector2( 16, 16 )
