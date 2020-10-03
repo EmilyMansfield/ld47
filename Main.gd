@@ -1,10 +1,25 @@
 extends Node
 
+const levels = [
+    "res://levels/TestSpline.tscn"
+   ]
 
-func _ready():
-    var spline_nodes = $SplineDraggableManager/Spline.get_children()
+func reset_spline(level_idx: int):
+    assert(0 <= level_idx and level_idx <= levels.size())
+    
+    var level_name: String = self.levels[level_idx]
+    var level_spline: Spline = load(level_name).instance()
+    level_spline.position = get_viewport().size / 2.0
+    level_spline.is_closed = true
+    $SplineDraggableManager.add_child(level_spline)
+
+    var spline_nodes = level_spline.get_children()
     for spline_node in spline_nodes:
         assert (spline_node is Draggable)
         $SplineDraggableManager.add_draggable(spline_node)
 
-    $SplineDraggableManager.connect("drag_position", $SplineDraggableManager/Spline, "_on_drag_position")
+    $SplineDraggableManager.connect("drag_position", level_spline, "_on_drag_position")
+
+
+func _ready():
+    reset_spline(0)

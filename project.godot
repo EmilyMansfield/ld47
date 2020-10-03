@@ -23,11 +23,17 @@ _global_script_classes=[ {
 "class": "GitAPI",
 "language": "NativeScript",
 "path": "res://git_api.gdns"
+}, {
+"base": "Node2D",
+"class": "Spline",
+"language": "GDScript",
+"path": "res://Spline.gd"
 } ]
 _global_script_class_icons={
 "Draggable": "",
 "DraggableManager": "",
-"GitAPI": ""
+"GitAPI": "",
+"Spline": ""
 }
 
 [application]
@@ -35,6 +41,11 @@ _global_script_class_icons={
 config/name="ld47"
 run/main_scene="res://Main.tscn"
 config/icon="res://icon.png"
+
+[display]
+
+window/size/width=600
+window/handheld/orientation="portrait"
 
 [gdnative]
 

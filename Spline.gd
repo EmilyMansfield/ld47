@@ -1,8 +1,11 @@
 extends Node2D
 
+class_name Spline
+
 export var line_width: float = 8.0
 export var is_closed: bool = false
 export var line_color: Color = Color(0.2, 0.7, 0.9)
+export var show_intersections: bool = false
 
 var palette: Array = [
     Color("51e5ff"), Color("440381"), Color("ec368d"), Color("ffa5a5"),
@@ -297,8 +300,9 @@ func _draw():
     for c in self.crossing_map.crossings:
         crossing_points.push_back(c.pos)
 
-    for p in crossing_points:
-        draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
+    if self.show_intersections:
+        for p in crossing_points:
+            draw_circle(p, self.line_width / 2.0, Color(1.0, 1.0, 1.0))
     
     var num_crossing_points := crossing_points.size()
     for i in range(num_crossing_points):
