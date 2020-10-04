@@ -32,6 +32,16 @@ class Crossing:
     func get_upper_index() -> int:
         return self.idx1 if self.lower_idx == idx0 else self.idx0
 
+    func duplicate() -> Crossing:
+        var tmp := Crossing.new()
+        tmp.pos = self.pos
+        tmp.t0 = self.t0
+        tmp.t1 = self.t1
+        tmp.idx0 = self.idx0
+        tmp.idx1 = self.idx1
+        tmp.lower_idx = self.lower_idx
+        return tmp
+
 
 class CrossingMap:
     # Array of all actual crossings, deduplicated
@@ -245,8 +255,57 @@ func get_crossings() -> CrossingMap:
             crossing.t0 = t_i
             crossing.t1 = t_j
             crossing.pos = p as Vector2
-            # TODO: Lower indx!
-            crossing.lower_idx = i
+            
+            # Find the lower index through continuity with previous crossings,
+            # otherwise use an initial configuration. While not the case with
+            # straight lines (i.e. now) it might be that two lines can cross
+            # each other multiple times so check for close t values as well
+            if self.crossing_map != null:
+                var candidate_crossings := []
+                for oc in self.crossing_map.crossings:
+                    var old_crossing := oc as Crossing
+                    if old_crossing.idx0 == crossing.idx0 and old_crossing.idx1 == crossing.idx1:
+                        candidate_crossings.push_back(old_crossing)
+                    elif old_crossing.idx0 == crossing.idx1 and old_crossing.idx1 == crossing.idx0:
+                        var tmp_crossing := old_crossing.duplicate()
+                        # No swap function, and can't write one because
+                        # references will just be reassigned and builtin types
+                        # are unconditionally passed by value :(
+                        var tmp := tmp_crossing.idx0
+                        tmp_crossing.idx0 = tmp_crossing.idx1
+                        tmp_crossing.idx1 = tmp
+                        tmp = tmp_crossing.t0
+                        tmp_crossing.t0 = tmp_crossing.t1
+                        tmp_crossing.t1 = tmp
+                        candidate_crossings.push_back(old_crossing)
+                
+                if candidate_crossings.size() == 1:
+                    # Ignore t values and just assume it's the same crossing
+                    crossing.lower_idx = candidate_crossings[0].lower_idx
+                elif candidate_crossings.size() > 2:
+                    # Multiple potential crossings, find the one with the
+                    # closest t values.
+                    var candidate_crossing = null
+                    var min_t_dist := 1_000_000.0
+                    for candidate in candidate_crossings:
+                        var t_dist := abs(crossing.t0 - candidate.t0) + abs(crossing.t1 - candidate.t1)
+                        if t_dist < min_t_dist:
+                            candidate_crossing = candidate
+                            min_t_dist = t_dist
+                    assert(candidate_crossing != null)
+                    crossing.lower_idx = (candidate_crossing as Crossing).lower_idx
+                else:
+                    # No similar crossings, could have come from a bifurcation
+                    # or from a corner
+                    # TODO: Lower indx!
+                    crossing.lower_idx = i
+                    print("No similiar crossing found for ", i, " crossing ", j)
+            else:
+                # No previous crossings so spline has just been reset, need to
+                # use the default
+                crossing.lower_idx = i
+                print("Initial crossing for ", i, " and ", j)
+
             crossing_map.crossings.push_back(crossing)
             
             crossing_map.per_line_crossings[i].push_back(crossing_idx)
