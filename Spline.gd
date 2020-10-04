@@ -234,12 +234,45 @@ func get_point_from_parameter(idx: int, t: float) -> Vector2:
     return interp_spline(p0, p1, t)
 
 
+func build_candidate_crossings(crossing: Crossing) -> Array:
+    var candidate_crossings := []
+    for oc in self.crossing_map.crossings:
+        var old_crossing := oc as Crossing
+        if old_crossing.idx0 == crossing.idx0 and old_crossing.idx1 == crossing.idx1:
+            candidate_crossings.push_back(old_crossing)
+        elif old_crossing.idx0 == crossing.idx1 and old_crossing.idx1 == crossing.idx0:
+            var tmp_crossing := old_crossing.duplicate()
+            # No swap function, and can't write one because
+            # references will just be reassigned and builtin types
+            # are unconditionally passed by value :(
+            var tmp := tmp_crossing.idx0
+            tmp_crossing.idx0 = tmp_crossing.idx1
+            tmp_crossing.idx1 = tmp
+            tmp = tmp_crossing.t0
+            tmp_crossing.t0 = tmp_crossing.t1
+            tmp_crossing.t1 = tmp
+            candidate_crossings.push_back(old_crossing)
+    return candidate_crossings
+
+
+func find_closest_candidate_by_t(candidate_crossings: Array, crossing: Crossing) -> Crossing:
+    var candidate_crossing = null
+    var min_t_dist := 1_000_000.0
+    for candidate in candidate_crossings:
+        var t_dist := abs(crossing.t0 - candidate.t0) + abs(crossing.t1 - candidate.t1)
+        if t_dist < min_t_dist:
+            candidate_crossing = candidate
+            min_t_dist = t_dist
+    assert(candidate_crossing != null)
+    return candidate_crossing
+
+
 func get_crossings() -> CrossingMap:
-    var crossing_map := CrossingMap.new()
-
-    for _i in range(get_segment_count()):
-        crossing_map.per_line_crossings.push_back([])
-
+   
+    # To keep lower indices continuous must identify old crossings with new
+    # ones and find which ones have appeared/disappeared. This can only be done
+    # after all crossings have been found to avoid ordering issues.
+    var deferred_crossings := []
     for i in range(get_segment_count()):
         for j in range(i + 1, get_segment_count()):
             var p = check_crossing(i, j)
@@ -247,8 +280,7 @@ func get_crossings() -> CrossingMap:
                 continue
             var t_i := get_parameter_from_point(i, p as Vector2)
             var t_j := get_parameter_from_point(j, p as Vector2)
-            
-            var crossing_idx := crossing_map.crossings.size()
+
             var crossing := Crossing.new()
             crossing.idx0 = i
             crossing.idx1 = j
@@ -256,61 +288,126 @@ func get_crossings() -> CrossingMap:
             crossing.t1 = t_j
             crossing.pos = p as Vector2
             
-            # Find the lower index through continuity with previous crossings,
-            # otherwise use an initial configuration. While not the case with
-            # straight lines (i.e. now) it might be that two lines can cross
-            # each other multiple times so check for close t values as well
-            if self.crossing_map != null:
-                var candidate_crossings := []
-                for oc in self.crossing_map.crossings:
-                    var old_crossing := oc as Crossing
-                    if old_crossing.idx0 == crossing.idx0 and old_crossing.idx1 == crossing.idx1:
-                        candidate_crossings.push_back(old_crossing)
-                    elif old_crossing.idx0 == crossing.idx1 and old_crossing.idx1 == crossing.idx0:
-                        var tmp_crossing := old_crossing.duplicate()
-                        # No swap function, and can't write one because
-                        # references will just be reassigned and builtin types
-                        # are unconditionally passed by value :(
-                        var tmp := tmp_crossing.idx0
-                        tmp_crossing.idx0 = tmp_crossing.idx1
-                        tmp_crossing.idx1 = tmp
-                        tmp = tmp_crossing.t0
-                        tmp_crossing.t0 = tmp_crossing.t1
-                        tmp_crossing.t1 = tmp
-                        candidate_crossings.push_back(old_crossing)
-                
-                if candidate_crossings.size() == 1:
-                    # Ignore t values and just assume it's the same crossing
-                    crossing.lower_idx = candidate_crossings[0].lower_idx
-                elif candidate_crossings.size() > 2:
-                    # Multiple potential crossings, find the one with the
-                    # closest t values.
-                    var candidate_crossing = null
-                    var min_t_dist := 1_000_000.0
-                    for candidate in candidate_crossings:
-                        var t_dist := abs(crossing.t0 - candidate.t0) + abs(crossing.t1 - candidate.t1)
-                        if t_dist < min_t_dist:
-                            candidate_crossing = candidate
-                            min_t_dist = t_dist
-                    assert(candidate_crossing != null)
-                    crossing.lower_idx = (candidate_crossing as Crossing).lower_idx
-                else:
-                    # No similar crossings, could have come from a bifurcation
-                    # or from a corner
-                    # TODO: Lower indx!
-                    crossing.lower_idx = i
-                    print("No similiar crossing found for ", i, " crossing ", j)
+            deferred_crossings.push_back(crossing)
+    
+    var resolved_crossings := []
+    
+    # For each existing crossing, find the deferred crossing that is closest to
+    # it and has the same intersections (in any order).
+    # Is it true that a new crossing that is closer to any existing crossing
+    # than the image of the existing crossing under the move, cannot appear?
+    
+    if self.crossing_map == null:
+        # No crossings yet, assign them from the initial state.
+        for dc in deferred_crossings:
+            var deferred_crossing := dc as Crossing
+            # TODO: Set from initial state
+            deferred_crossing.lower_idx = deferred_crossing.idx0
+            resolved_crossings.push_back(deferred_crossing)
+        deferred_crossings.clear()
+    else:
+        var old_crossings := []
+        for oc in self.crossing_map.crossings:
+            var old_crossing := oc as Crossing
+            var min_t_dist := 1_000_000.0
+            var min_crossing = null
+            for dc in deferred_crossings:
+                var deferred_crossing := dc as Crossing
+                var same_indices := old_crossing.idx0 == deferred_crossing.idx0 and old_crossing.idx1 == deferred_crossing.idx1
+                var opp_indices := old_crossing.idx0 == deferred_crossing.idx1 and old_crossing.idx1 == deferred_crossing.idx0
+                if (not same_indices) and (not opp_indices):
+                    continue
+                # Same segments contributing to the intersection so this is a
+                # candidate
+                var t_dist := 0.0
+                if same_indices:
+                    t_dist = abs(old_crossing.t0 - deferred_crossing.t0) + abs(old_crossing.t1 - deferred_crossing.t1)
+                elif opp_indices:
+                    t_dist = abs(old_crossing.t0 - deferred_crossing.t1) + abs(old_crossing.t1 - deferred_crossing.t0)
+                if t_dist < min_t_dist:
+                    min_crossing = deferred_crossing
+        
+            if min_crossing == null:
+                # No match, may have disappeared or gone round a corner. Add it to
+                # the list so that end result is old_crossings contains all old
+                # crossings that haven't been resolved, basically the set removal
+                # below without actually removing anything
+                old_crossings.push_back(old_crossing)
             else:
-                # No previous crossings so spline has just been reset, need to
-                # use the default
-                crossing.lower_idx = i
-                print("Initial crossing for ", i, " and ", j)
-
-            crossing_map.crossings.push_back(crossing)
+                var i := deferred_crossings.find(min_crossing)
+                deferred_crossings.remove(i)
+                min_crossing.lower_idx = old_crossing.lower_idx
+                resolved_crossings.push_back(min_crossing)
+        
+        # If old crossings that weren't matched, try to match them up to any 
+        # unmatched new crossings by proximinity.
+        for oc in old_crossings:
+            var old_crossing := oc as Crossing
+            var min_dist := 1_000_000
+            var min_crossing = null
+            for dc in deferred_crossings:
+                var deferred_crossing := dc as Crossing
+                var dist := deferred_crossing.pos.distance_to(old_crossing.pos)
+                if dist < min_dist:
+                    min_crossing = deferred_crossing
+                    min_dist = dist
+                    # TODO: Pretty sure this is broken; what if a new crossing appears
+                    #       near the old disappearing crossing and it isn't a corner?
+                    #       Can that even happen?
             
-            crossing_map.per_line_crossings[i].push_back(crossing_idx)
-            crossing_map.per_line_crossings[j].push_back(crossing_idx)
+            if min_crossing != null:
+                # Corner
+                var i := deferred_crossings.find(min_crossing)
+                deferred_crossings.remove(i)
+                # Crossing has moved around a corner so one of the indices
+                # should match but the other won't. If the one that matches is
+                # the lower index it should stay lower, otherwise it is upper
+                # and stays upper.
+                if old_crossing.lower_idx == old_crossing.idx0:
+                    if min_crossing.idx0 == old_crossing.idx0:
+                        min_crossing.lower_idx = old_crossing.idx0
+                    elif min_crossing.idx1 == old_crossing.idx0:
+                        min_crossing.lower_idx = old_crossing.idx0
+                    else:
+                        var upper_idx := old_crossing.idx1
+                        min_crossing.lower_idx = min_crossing.idx1 if min_crossing.idx0 == upper_idx else min_crossing.idx0
+                else:
+                    if min_crossing.idx0 == old_crossing.idx1:
+                        min_crossing.lower_idx = old_crossing.idx1
+                    elif min_crossing.idx1 == old_crossing.idx1:
+                        min_crossing.lower_idx = old_crossing.idx1
+                    else:
+                        var upper_idx := old_crossing.idx0
+                        min_crossing.lower_idx = min_crossing.idx1 if min_crossing.idx0 == upper_idx else min_crossing.idx0
 
+                resolved_crossings.push_back(min_crossing)
+    
+        # All old crossings have been matched to ones on the same edge, ones around
+        # a corner, or have been removed entirely. Any remaining deferred crossings
+        # must be new.
+        for dc in deferred_crossings:
+            var deferred_crossing := dc as Crossing
+            # TODO: Set index based on player input, whether new intersection is
+            #       above or below
+            deferred_crossing.lower_idx = deferred_crossing.idx0
+            resolved_crossings.push_back(deferred_crossing)
+        deferred_crossings.clear()
+    
+    assert(deferred_crossings.empty())
+
+    # All crossings resolved, add them
+    var crossing_map := CrossingMap.new()
+    var crossing_idx := 0
+    for _i in range(get_segment_count()):
+        crossing_map.per_line_crossings.push_back([])
+    
+    for crossing in resolved_crossings:
+        crossing_map.crossings.push_back(crossing)
+        
+        crossing_map.per_line_crossings[crossing.idx0].push_back(crossing_idx)
+        crossing_map.per_line_crossings[crossing.idx1].push_back(crossing_idx)
+        crossing_idx += 1
+        
     # Sort the per_line_crossings for each line into increasing t order so that
     # traversal along the line coincides with traversal along the crossings of
     # that line. This helps rendering gaps around crossings.
