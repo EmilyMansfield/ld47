@@ -201,19 +201,24 @@ func get_overlapping_segment(pos: Vector2):
     
 # TODO: Customization point for fancy splines
 func check_crossing(idx0: int, idx1: int):
+    if (idx0 + 1) % get_segment_count() == idx1:
+        return null
+    if (idx1 + 1) % get_segment_count() == idx0:
+        return null
+
     # Segment 0
     var c0 := get_segment_begin(idx0)
     var c1 := get_segment_end(idx0)
     var p0 := c0.get_position()
     var p1 := c1.get_position()
-    p1 = interp_spline(p0, p1, 0.99)
+#    p1 = interp_spline(p0, p1, 1.0)
 
     # Segment 1
     var d0 := get_segment_begin(idx1)
     var d1 := get_segment_end(idx1)
     var q0 := d0.get_position()
     var q1 := d1.get_position()
-    q1 = interp_spline(q0, q1, 0.99)
+#    q1 = interp_spline(q0, q1, 1.0)
     
     return Geometry.segment_intersects_segment_2d(p0, p1, q0, q1)
 
@@ -373,18 +378,18 @@ func get_crossings() -> CrossingMap:
                 # the lower index it should stay lower, otherwise it is upper
                 # and stays upper.
                 if old_crossing.lower_idx == old_crossing.idx0:
-                    if min_crossing.idx0 == old_crossing.idx0:
-                        min_crossing.lower_idx = old_crossing.idx0
-                    elif min_crossing.idx1 == old_crossing.idx0:
-                        min_crossing.lower_idx = old_crossing.idx0
+                    if min_crossing.idx0 == old_crossing.lower_idx:
+                        min_crossing.lower_idx = old_crossing.lower_idx
+                    elif min_crossing.idx1 == old_crossing.lower_idx:
+                        min_crossing.lower_idx = old_crossing.lower_idx
                     else:
                         var upper_idx := old_crossing.idx1
                         min_crossing.lower_idx = min_crossing.idx1 if min_crossing.idx0 == upper_idx else min_crossing.idx0
                 else:
-                    if min_crossing.idx0 == old_crossing.idx1:
-                        min_crossing.lower_idx = old_crossing.idx1
-                    elif min_crossing.idx1 == old_crossing.idx1:
-                        min_crossing.lower_idx = old_crossing.idx1
+                    if min_crossing.idx0 == old_crossing.lower_idx:
+                        min_crossing.lower_idx = old_crossing.lower_idx
+                    elif min_crossing.idx1 == old_crossing.lower_idx:
+                        min_crossing.lower_idx = old_crossing.lower_idx
                     else:
                         var upper_idx := old_crossing.idx0
                         min_crossing.lower_idx = min_crossing.idx1 if min_crossing.idx0 == upper_idx else min_crossing.idx0
