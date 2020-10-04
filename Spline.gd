@@ -25,7 +25,10 @@ class Crossing:
     var idx0: int
     var idx1: int
     var lower_idx: int
-    
+
+    func involves(p_idx0: int, p_idx1: int) -> bool:
+        return (self.idx0 == p_idx0 and self.idx1 == p_idx1) or (self.idx0 == p_idx1 and self.idx1 == p_idx0)
+ 
     func get_lower_index() -> int:
         return self.lower_idx
     
@@ -54,6 +57,12 @@ class CrossingMap:
 var crossing_map: CrossingMap
 var invalid_move_normals := [] # Array[Vector2]
 var invalid_move_offsets := [] # [Vector2]
+
+
+# Override in derived classes
+func get_lower_idx(crossing: Crossing) -> int:
+    return crossing.idx0
+
 
 # TODO: Get fancy and use Kochanek-Bartels, probably
 func get_spline_points(begin: Vector2, end: Vector2) -> PoolVector2Array:
@@ -302,7 +311,7 @@ func get_crossings() -> CrossingMap:
         for dc in deferred_crossings:
             var deferred_crossing := dc as Crossing
             # TODO: Set from initial state
-            deferred_crossing.lower_idx = deferred_crossing.idx0
+            deferred_crossing.lower_idx = get_lower_idx(deferred_crossing)
             resolved_crossings.push_back(deferred_crossing)
         deferred_crossings.clear()
     else:
