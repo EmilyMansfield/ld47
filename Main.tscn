@@ -41,7 +41,21 @@ margin_right = 24.0
 margin_bottom = 20.0
 theme = ExtResource( 6 )
 custom_fonts/font = ExtResource( 5 )
-text = "Reset"
+text = "reset"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="NextButton" type="Button" parent="CanvasLayer"]
+anchor_left = 0.86
+anchor_right = 0.86
+margin_left = -24.0
+margin_top = 502.0
+margin_right = 33.0
+margin_bottom = 531.0
+theme = ExtResource( 6 )
+custom_fonts/font = ExtResource( 5 )
+text = "next"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -135,5 +149,6 @@ stream = ExtResource( 7 )
 [connection signal="drag_start" from="SplineDraggableManager" to="." method="_on_SplineDraggableManager_drag_start"]
 [connection signal="drag_stop" from="SplineDraggableManager" to="." method="_on_SplineDraggableManager_drag_stop"]
 [connection signal="pressed" from="CanvasLayer/ResetButton" to="." method="_on_ResetButton_pressed"]
+[connection signal="pressed" from="CanvasLayer/NextButton" to="." method="_on_NextButton_pressed"]
 [connection signal="pressed" from="CanvasLayer/DebugMenu/PrintCrossingsButton" to="." method="_on_PrintCrossingsButton_pressed"]
 [connection signal="pressed" from="CanvasLayer/DebugMenu/ToggleDebugButton" to="." method="_on_ToggleDebugButton_pressed"]

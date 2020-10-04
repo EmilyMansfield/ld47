@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://Draggable.gd" type="Script" id=1]
+[ext_resource path="res://Level1Spline.gd" type="Script" id=2]
+
+[node name="Level1Spline" type="Node2D"]
+script = ExtResource( 2 )
+
+[node name="Spline0" type="Node2D" parent="."]
+position = Vector2( 80.2476, 139.641 )
+script = ExtResource( 1 )
+
+[node name="Spline1" type="Node2D" parent="."]
+position = Vector2( -75.9031, -91.5191 )
+script = ExtResource( 1 )
+
+[node name="Spline2" type="Node2D" parent="."]
+position = Vector2( 18.8098, -111.956 )
+script = ExtResource( 1 )
+
+[node name="Spline3" type="Node2D" parent="."]
+position = Vector2( 27.4901, 89.2066 )
+script = ExtResource( 1 )
+
+[node name="Spline4" type="Node2D" parent="."]
+position = Vector2( -84.8427, 101.969 )
+script = ExtResource( 1 )
+
+[node name="Spline5" type="Node2D" parent="."]
+position = Vector2( -2.32892, -37.8993 )
+script = ExtResource( 1 )
+
+[node name="Spline6" type="Node2D" parent="."]
+position = Vector2( 111.962, 29.323 )
+script = ExtResource( 1 )

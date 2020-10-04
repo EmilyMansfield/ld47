@@ -4,7 +4,7 @@ export var show_debug_menu: bool = OS.is_debug_build()
 
 const levels = [
     "res://levels/Level0Spline.tscn",
-    "res://levels/TestSpline.tscn"
+    "res://levels/Level1Spline.tscn"
    ]
 
 const palette: Array = [
@@ -16,14 +16,16 @@ var is_level_done := false
 var num_moves := 0
 var num_total_moves := 0
 var is_started := false
+var current_level := 0
+
 
 func bump_total_moves() -> void:
-    num_total_moves += num_moves
+    self.num_total_moves += self.num_moves
 
 
 func set_num_moves(num: int) -> void:
     self.num_moves = num
-    $CanvasLayer/MovesLabel.text = String(self.num_moves)
+    $CanvasLayer/MovesLabel.text = String(self.num_total_moves + self.num_moves)
     
 
 func reset_spline(level_idx: int):
@@ -74,10 +76,11 @@ func _ready():
     $CanvasLayer/InstructionLabel.text = "click to start"
     $CanvasLayer/MovesLabel.hide()
     $CanvasLayer/MovesCaption.hide()
+    $CanvasLayer/NextButton.hide()
 
 
 func _on_ResetButton_pressed():
-    reset_spline(0)
+    reset_spline(self.current_level)
 
 
 func _on_PrintCrossingsButton_pressed():
@@ -102,19 +105,7 @@ func _on_SplineDraggableManager_drag_stop():
         if self.is_level_done:
             return
         if s.get_crossing_number() == 0:
-            var par_scores := s.get_par_scores()
-            assert(par_scores.size() == 3)
-            if self.num_moves <= par_scores[0]:
-                s.line_color = self.palette[0]
-                $Success1Sound.play()
-            elif self.num_moves <= par_scores[1]:
-                s.line_color = self.palette[1]
-                $Success2Sound.play()
-            else:
-                s.line_color = self.palette[2]
-                $Success3Sound.play()
-
-            self.is_level_done = true
+            self.level_done()
 
 func _input(event: InputEvent) -> void:
     if self.is_started:
@@ -122,4 +113,34 @@ func _input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == BUTTON_LEFT:
             self.start()
-        
+
+# pre: self.level_spline != null
+func level_done() -> void:
+    if self.is_level_done:
+        return
+
+    var s := self.level_spline as Spline
+    var par_scores := s.get_par_scores()
+    assert(par_scores.size() == 3)
+    if self.num_moves <= par_scores[0]:
+        s.line_color = self.palette[0]
+        $Success1Sound.play()
+    elif self.num_moves <= par_scores[1]:
+        s.line_color = self.palette[1]
+        $Success2Sound.play()
+    else:
+        s.line_color = self.palette[2]
+        $Success3Sound.play()
+
+    self.is_level_done = true
+    $CanvasLayer/NextButton.show()
+
+
+func _on_NextButton_pressed():
+    self.bump_total_moves()
+    self.is_level_done = false
+    self.current_level += 1
+    if self.current_level < self.levels.size():
+        reset_spline(self.current_level)
+    else:
+        print("Done")
