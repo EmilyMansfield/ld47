@@ -1,4 +1,4 @@
-# Unknot - Ludum Dare 47
+# Unknot - Ludum Dare 47 (Unsubmitted)
 
 Try and untie some knots, because that's usually a relaxing activity, right?
 
@@ -30,3 +30,12 @@ according to the SIL Open Font License in the OFL.txt file.
 The remaining files are provided under the Creative Commons Zero v1.0 Universal
 license, included in the LICENSE file.
 
+## Post-mortem
+
+Unfortunately correctly handling intersections in all cases was too hard in the
+time, there are outstanding bugs that make only relatively trivial puzzles
+possible. These are illustrated in the first few levels, while the last is
+incompletable as far as I know. I may come back and rewrite this with a more
+thought-out strategy, with bugs squashed, since I'm pretty happy with the
+premise and the overall execution, but the details are important here and sadly
+they were not ironed out in time.
