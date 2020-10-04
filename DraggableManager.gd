@@ -53,11 +53,13 @@ func do_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == BUTTON_LEFT:
             if self.active_draggable:
+                emit_signal("drag_stop")
                 self.active_draggable = null
-            else:
+            elif event.pressed:
                 self.active_draggable = find_nearest_draggable(event.position)
                 if self.active_draggable == null:
                     return
+                emit_signal("drag_start")
                 self.drag_position = self.active_draggable.global_position - event.position
         return
     

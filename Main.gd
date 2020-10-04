@@ -3,8 +3,28 @@ extends Node
 export var show_debug_menu: bool = OS.is_debug_build()
 
 const levels = [
+    "res://levels/Level0Spline.tscn",
     "res://levels/TestSpline.tscn"
    ]
+
+const palette: Array = [
+    Color("51e5ff"), Color("440381"), Color("ec368d"), Color("ffa5a5"), Color("ffd6c0")
+   ]
+
+var level_spline = null
+var is_level_done := false
+var num_moves := 0
+var num_total_moves := 0
+var is_started := false
+
+func bump_total_moves() -> void:
+    num_total_moves += num_moves
+
+
+func set_num_moves(num: int) -> void:
+    self.num_moves = num
+    $CanvasLayer/MovesLabel.text = String(self.num_moves)
+    
 
 func reset_spline(level_idx: int):
     assert(0 <= level_idx and level_idx <= levels.size())
@@ -22,22 +42,38 @@ func reset_spline(level_idx: int):
     level_spline.position = get_viewport().size / 2.0
     level_spline.is_closed = true
     level_spline.show_intersections = show_intersections
+    level_spline.line_color = self.palette[3]
     $SplineDraggableManager.add_child(level_spline)
     $SplineDraggableManager.refresh_draggables()
+    self.level_spline = level_spline
+    self.set_num_moves(0)
+    self.is_level_done = false
 
-    var spline_nodes = level_spline.get_children()
+    var spline_nodes = self.level_spline.get_children()
     for spline_node in spline_nodes:
         assert (spline_node is Draggable)
         $SplineDraggableManager.add_draggable(spline_node)
 
     $SplineDraggableManager.connect("drag_position", level_spline, "_on_drag_position")
 
+func start():
+    $CanvasLayer/ResetButton.show()
+    $CanvasLayer/InstructionLabel.text = "untie the knot"
+    $CanvasLayer/MovesLabel.show()
+    $CanvasLayer/MovesCaption.show()
+    $CanvasLayer/Title.hide()
+
+    self.is_started = true
+    reset_spline(0)
+    if show_debug_menu:
+        $CanvasLayer/DebugMenu.show()
 
 func _ready():
-    reset_spline(0)
-    
-    if not show_debug_menu:
-        $CanvasLayer/DebugMenu.hide()
+    $CanvasLayer/DebugMenu.hide()
+    $CanvasLayer/ResetButton.hide()
+    $CanvasLayer/InstructionLabel.text = "click to start"
+    $CanvasLayer/MovesLabel.hide()
+    $CanvasLayer/MovesCaption.hide()
 
 
 func _on_ResetButton_pressed():
@@ -54,3 +90,36 @@ func _on_PrintCrossingsButton_pressed():
 func _on_ToggleDebugButton_pressed():
     var spline := $SplineDraggableManager.get_child(0) as Spline
     spline.show_intersections = !spline.show_intersections
+
+
+func _on_SplineDraggableManager_drag_start():
+    self.set_num_moves(1 + self.num_moves)
+
+
+func _on_SplineDraggableManager_drag_stop():
+    if self.level_spline:
+        var s := self.level_spline as Spline
+        if self.is_level_done:
+            return
+        if s.get_crossing_number() == 0:
+            var par_scores := s.get_par_scores()
+            assert(par_scores.size() == 3)
+            if self.num_moves <= par_scores[0]:
+                s.line_color = self.palette[0]
+                $Success1Sound.play()
+            elif self.num_moves <= par_scores[1]:
+                s.line_color = self.palette[1]
+                $Success2Sound.play()
+            else:
+                s.line_color = self.palette[2]
+                $Success3Sound.play()
+
+            self.is_level_done = true
+
+func _input(event: InputEvent) -> void:
+    if self.is_started:
+        return
+    if event is InputEventMouseButton:
+        if event.button_index == BUTTON_LEFT:
+            self.start()
+        

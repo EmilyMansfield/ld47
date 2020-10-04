@@ -29,12 +29,14 @@ func do_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == BUTTON_LEFT:
             if self.active_draggable or self.active_draggable_segment:
+                emit_signal("drag_stop")
                 self.active_draggable = null
                 self.active_draggable_segment = null
-            else:
+            elif event.pressed:
                 self.active_draggable = find_nearest_draggable(event.position)
                 if self.active_draggable != null:
                     self.drag_position = event.position - self.active_draggable.global_position
+                    emit_signal("drag_start")
                     return
                 # No draggable, but if on a line then move the entire line
                 # instead
@@ -42,6 +44,7 @@ func do_input(event: InputEvent) -> void:
                 if self.active_draggable_segment != null:
                     self.segment_drag_position0 = event.position - self.active_draggable_segment[0].get_global_position()
                     self.segment_drag_position1 = event.position - self.active_draggable_segment[1].get_global_position() 
+                    emit_signal("drag_start")
                     return
         return
     

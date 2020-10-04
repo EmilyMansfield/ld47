@@ -7,10 +7,6 @@ export var is_closed: bool = false
 export var line_color: Color = Color(0.2, 0.7, 0.9)
 export var show_intersections: bool = false
 
-var palette: Array = [
-    Color("51e5ff"), Color("440381"), Color("ec368d"), Color("ffa5a5"),
-   ]
-
 #var palette: Array = [
 #    Color(1.0, 0.0, 0.0), Color(0.0, 1.0, 0.0), Color(0.0, 0.0, 1.0),
 #    Color(0.0, 1.0, 1.0), Color(1.0, 0.0, 1.0), Color(1.0, 1.0, 0.0)
@@ -62,6 +58,11 @@ var invalid_move_offsets := [] # [Vector2]
 # Override in derived classes
 func get_lower_idx(crossing: Crossing) -> int:
     return crossing.idx0
+
+
+# Override in derived classes
+func get_par_scores() -> Array:
+    return [1_000_000, 1_000_000, 1_000_000]
 
 
 # TODO: Get fancy and use Kochanek-Bartels, probably
@@ -556,8 +557,7 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 #    self.crossing_map = get_crossings()
-    
-    self.line_color = self.palette[self.get_crossing_number() % self.palette.size()]
+
     self.update()
 
 

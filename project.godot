@@ -53,6 +53,10 @@ window/stretch/aspect="keep"
 
 singletons=[ "res://git_api.gdnlib" ]
 
+[gui]
+
+theme/custom="res://theme.tres"
+
 [rendering]
 
 quality/driver/driver_name="GLES2"
