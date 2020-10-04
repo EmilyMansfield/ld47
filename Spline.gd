@@ -25,6 +25,12 @@ class Crossing:
     var idx0: int
     var idx1: int
     var lower_idx: int
+    
+    func get_lower_index() -> int:
+        return self.lower_idx
+    
+    func get_upper_index() -> int:
+        return self.idx1 if self.lower_idx == idx0 else self.idx0
 
 
 class CrossingMap:
@@ -336,13 +342,24 @@ func _on_drag_position(draggable: Draggable, pos: Vector2) -> void:
     var num_crossing_points := self.crossing_map.crossings.size()
     for i in range(num_crossing_points):
         var p: Vector2 = self.crossing_map.crossings[i].pos
-        var p_on_top: bool = (i != self.crossing_map.crossings[i].lower_idx)
 
         for j in range(i + 1, num_crossing_points):
             var q: Vector2 = self.crossing_map.crossings[j].pos
-            var q_on_top: bool = (j != self.crossing_map.crossings[j].lower_idx)
+
+            # Edge can pass over if the same line is above (below) both
+            # crossings. That is, either the lower_idxs agree, or they disagree
+            # and the remaining indices agree.
+            var lower_segments := [
+                self.crossing_map.crossings[i].get_lower_index(),
+                self.crossing_map.crossings[j].get_lower_index(),
+               ]
+            var upper_segments := [
+                self.crossing_map.crossings[i].get_upper_index(),
+                self.crossing_map.crossings[j].get_upper_index(),
+               ]
+            var same_side: bool = (lower_segments[0] == lower_segments[1]
+                                or upper_segments[0] == upper_segments[1])
             
-            var same_side := p_on_top == q_on_top
             if not same_side and p.distance_squared_to(q) <= pow(2.0 * self.line_width, 2.0):
                 # Points too close, invalid move. Define a union of half-planes
                 # symmetric about the current direction of motion that cannot

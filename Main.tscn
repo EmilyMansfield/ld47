@@ -11,13 +11,37 @@ script = ExtResource( 3 )
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="ResetButton" type="Button" parent="CanvasLayer"]
-anchor_left = 0.9
-anchor_right = 0.9
-margin_left = -48.0
+anchor_left = 0.86
+anchor_right = 0.86
+margin_left = -24.0
 margin_top = 50.0
+margin_right = 24.0
 margin_bottom = 20.0
 text = "Reset"
 __meta__ = {
 "_edit_use_anchors_": false
 }
+
+[node name="DebugMenu" type="HBoxContainer" parent="CanvasLayer"]
+margin_right = 40.0
+margin_bottom = 40.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="PrintCrossingsButton" type="Button" parent="CanvasLayer/DebugMenu"]
+margin_right = 107.0
+margin_bottom = 40.0
+text = "Print Crossings"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ToggleDebugButton" type="Button" parent="CanvasLayer/DebugMenu"]
+margin_left = 111.0
+margin_right = 229.0
+margin_bottom = 40.0
+text = "Toggle Crossings"
 [connection signal="pressed" from="CanvasLayer/ResetButton" to="." method="_on_ResetButton_pressed"]
+[connection signal="pressed" from="CanvasLayer/DebugMenu/PrintCrossingsButton" to="." method="_on_PrintCrossingsButton_pressed"]
+[connection signal="pressed" from="CanvasLayer/DebugMenu/ToggleDebugButton" to="." method="_on_ToggleDebugButton_pressed"]
