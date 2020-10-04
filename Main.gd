@@ -4,7 +4,9 @@ export var show_debug_menu: bool = OS.is_debug_build()
 
 const levels = [
     "res://levels/Level0Spline.tscn",
-    "res://levels/Level1Spline.tscn"
+    "res://levels/Level1Spline.tscn",
+    "res://levels/Level2Spline.tscn",
+    "res://levels/Level3Spline.tscn",
    ]
 
 const palette: Array = [
@@ -51,6 +53,11 @@ func reset_spline(level_idx: int):
     self.set_num_moves(0)
     self.is_level_done = false
 
+    if self.level_spline.get_target_crossing_number() == 0:
+        $CanvasLayer/InstructionLabel.text = "untie the knot"
+    else:
+        $CanvasLayer/InstructionLabel.text = "make " + String(self.level_spline.get_target_crossing_number()) + " crossings"
+
     var spline_nodes = self.level_spline.get_children()
     for spline_node in spline_nodes:
         assert (spline_node is Draggable)
@@ -66,7 +73,7 @@ func start():
     $CanvasLayer/Title.hide()
 
     self.is_started = true
-    reset_spline(0)
+    reset_spline(self.current_level)
     if show_debug_menu:
         $CanvasLayer/DebugMenu.show()
 
@@ -104,7 +111,7 @@ func _on_SplineDraggableManager_drag_stop():
         var s := self.level_spline as Spline
         if self.is_level_done:
             return
-        if s.get_crossing_number() == 0:
+        if s.get_crossing_number() == s.get_target_crossing_number():
             self.level_done()
 
 func _input(event: InputEvent) -> void:
